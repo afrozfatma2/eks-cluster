@@ -1,10 +1,10 @@
-# EKS Cluster Security Group
-resource "aws_security_group" "eks_cluster_sg" {
-  name        = "eks-cluster-sg"
-  description = "Security group for EKS control plane"
+# Single Security Group for EKS Cluster and Nodes
+resource "aws_security_group" "eks_sg" {
+  name        = "eks-sg"
+  description = "Security group for EKS cluster and worker nodes"
   vpc_id      = data.aws_vpc.default.id
 
-  # Optional public API access
+  # Allow HTTPS traffic to EKS API server (public access)
   ingress {
     from_port   = 443
     to_port     = 443
@@ -12,31 +12,7 @@ resource "aws_security_group" "eks_cluster_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = { Name = "eks-cluster-sg" }
-}
-
-# EKS Node Security Group
-resource "aws_security_group" "eks_node_sg" {
-  name        = "eks-node-sg"
-  description = "Security group for EKS worker nodes"
-  vpc_id      = data.aws_vpc.default.id
-
-  # Node → Control plane
-  ingress {
-    from_port       = 443
-    to_port         = 443
-    protocol        = "tcp"
-    security_groups = [aws_security_group.eks_cluster_sg.id]  # only one direction
-  }
-
-  # Node-to-node pod communication
+  # Allow node-to-node pod communication (TCP)
   ingress {
     from_port = 1025
     to_port   = 65535
@@ -44,6 +20,7 @@ resource "aws_security_group" "eks_node_sg" {
     self      = true
   }
 
+  # Allow node-to-node pod communication (UDP)
   ingress {
     from_port = 0
     to_port   = 65535
@@ -53,13 +30,13 @@ resource "aws_security_group" "eks_node_sg" {
 
   # Kubelet API access
   ingress {
-    from_port       = 10250
-    to_port         = 10250
-    protocol        = "tcp"
-    security_groups = [aws_security_group.eks_cluster_sg.id]
+    from_port = 10250
+    to_port   = 10250
+    protocol  = "tcp"
+    self      = true
   }
 
-  # SSH (optional)
+  # Optional SSH access to nodes
   ingress {
     from_port   = 22
     to_port     = 22
@@ -67,7 +44,7 @@ resource "aws_security_group" "eks_node_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Outbound traffic for SSM/ECR/Internet
+  # Outbound traffic for Internet, SSM, ECR
   egress {
     from_port   = 0
     to_port     = 0
@@ -75,5 +52,7 @@ resource "aws_security_group" "eks_node_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = { Name = "eks-node-sg" }
+  tags = {
+    Name = "eks-sg"
+  }
 }

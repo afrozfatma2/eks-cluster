@@ -1,12 +1,3 @@
-# Default VPC subnets
-data "aws_subnets" "default_vpc_subnets" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.default.id]
-  }
-}
-
-# EKS Cluster
 resource "aws_eks_cluster" "eks_cluster" {
   name     = var.cluster_name
   role_arn = aws_iam_role.eks_cluster_role.arn
@@ -14,7 +5,7 @@ resource "aws_eks_cluster" "eks_cluster" {
 
   vpc_config {
     subnet_ids         = data.aws_subnets.default_vpc_subnets.ids
-    security_group_ids = [aws_security_group.eks_cluster_sg.id]
+    security_group_ids = [aws_security_group.eks_sg.id]  # single SG
   }
 
   depends_on = [
@@ -22,7 +13,6 @@ resource "aws_eks_cluster" "eks_cluster" {
   ]
 }
 
-# EKS Node Group
 resource "aws_eks_node_group" "eks_nodes" {
   cluster_name    = aws_eks_cluster.eks_cluster.name
   node_group_name = "${var.cluster_name}-node-group"
