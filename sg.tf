@@ -2,15 +2,7 @@
 resource "aws_security_group" "eks_cluster_sg" {
   name        = "eks-cluster-sg"
   description = "Security group for EKS control plane"
-  vpc_id      = data.aws_vpc.default.id  # Reference VPC from eks.tf
-
-  # Allow worker nodes to communicate with control plane
-  ingress {
-    from_port       = 443
-    to_port         = 443
-    protocol        = "tcp"
-    security_groups = [aws_security_group.eks_node_sg.id]
-  }
+  vpc_id      = data.aws_vpc.default.id
 
   # Optional public API access
   ingress {
@@ -34,14 +26,14 @@ resource "aws_security_group" "eks_cluster_sg" {
 resource "aws_security_group" "eks_node_sg" {
   name        = "eks-node-sg"
   description = "Security group for EKS worker nodes"
-  vpc_id      = data.aws_vpc.default.id  # Reference VPC from eks.tf
+  vpc_id      = data.aws_vpc.default.id
 
   # Node → Control plane
   ingress {
     from_port       = 443
     to_port         = 443
     protocol        = "tcp"
-    security_groups = [aws_security_group.eks_cluster_sg.id]
+    security_groups = [aws_security_group.eks_cluster_sg.id]  # only one direction
   }
 
   # Node-to-node pod communication
