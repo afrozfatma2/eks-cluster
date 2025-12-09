@@ -1,36 +1,30 @@
 resource "aws_eks_cluster" "eks_cluster" {
-  name     = var.cluster_name
-  role_arn = aws_iam_role.eks_cluster_role.arn
-  version  = "1.28"
+  name     = "my-eks-cluster"
+  role_arn = aws_iam_role.eks_role.arn
 
   vpc_config {
-    subnet_ids         = data.aws_subnets.default_vpc_subnets.ids
+    subnet_ids         = data.aws_vpc.default.subnets
     security_group_ids = [aws_security_group.eks_sg.id]
   }
 
   depends_on = [
-    aws_iam_role_policy_attachment.eks_cluster_policy
+    aws_iam_role_policy_attachment.attach_all
   ]
 }
 
-resource "aws_eks_node_group" "eks_nodes" {
+resource "aws_eks_node_group" "node_group" {
   cluster_name    = aws_eks_cluster.eks_cluster.name
-  node_group_name = "${var.cluster_name}-node-group"
-  node_role_arn   = aws_iam_role.eks_node_role.arn
-  subnet_ids      = data.aws_subnets.default_vpc_subnets.ids
+  node_group_name = "my-eks-node-group"
+  node_role_arn   = aws_iam_role.eks_role.arn
+  subnet_ids      = data.aws_vpc.default.subnets
 
   scaling_config {
-    desired_size = var.node_count
+    desired_size = 2
     max_size     = 2
-    min_size     = 1
+    min_size     = 2
   }
 
-  instance_types = [var.node_instance_type]
-
   depends_on = [
-    aws_iam_role_policy_attachment.eks_worker_node_policy,
-    aws_iam_role_policy_attachment.eks_cni_policy,
-    aws_iam_role_policy_attachment.eks_registry_policy,
-    aws_iam_role_policy_attachment.ssm_full_access
+    aws_eks_cluster.eks_cluster
   ]
 }
