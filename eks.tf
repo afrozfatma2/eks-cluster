@@ -1,9 +1,9 @@
-# Get default VPC
+# Default VPC
 data "aws_vpc" "default" {
   default = true
 }
 
-# Get subnets in default VPC
+# Default VPC subnets
 data "aws_subnets" "default_vpc_subnets" {
   filter {
     name   = "vpc-id"
@@ -11,6 +11,7 @@ data "aws_subnets" "default_vpc_subnets" {
   }
 }
 
+# EKS Cluster
 resource "aws_eks_cluster" "eks_cluster" {
   name     = var.cluster_name
   role_arn = aws_iam_role.eks_cluster_role.arn
@@ -26,6 +27,7 @@ resource "aws_eks_cluster" "eks_cluster" {
   ]
 }
 
+# EKS Node Group
 resource "aws_eks_node_group" "eks_nodes" {
   cluster_name    = aws_eks_cluster.eks_cluster.name
   node_group_name = "${var.cluster_name}-node-group"
