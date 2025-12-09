@@ -1,6 +1,3 @@
-provider "aws" {
-  region = "ap-south-1"
-}
 
 # Single IAM Role for EKS Cluster and Nodes
 resource "aws_iam_role" "eks_role" {
