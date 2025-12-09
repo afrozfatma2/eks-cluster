@@ -1,8 +1,3 @@
-# Default VPC
-data "aws_vpc" "default" {
-  default = true
-}
-
 # Default VPC subnets
 data "aws_subnets" "default_vpc_subnets" {
   filter {

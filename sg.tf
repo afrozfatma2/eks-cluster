@@ -1,8 +1,3 @@
-# Data source to get the default VPC
-data "aws_vpc" "default" {
-  default = true
-}
-
 # -----------------------------
 # EKS Cluster Security Group
 # -----------------------------
@@ -89,7 +84,7 @@ resource "aws_security_group" "eks_node_sg" {
 
   # SSH access for debugging 
   ingress {
-    description = "SSH access to nodes "
+    description = "SSH access to nodes \"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
