@@ -9,7 +9,7 @@ pipeline {
         stage('Checkout SCM') {
             steps {
                 // Checkout the repo (branch can be changed)
-                git branch: 'main', url: 'https://github.com/afrozfatma2/eks-cluster.git'
+                git branch: 'master', url: 'https://github.com/afrozfatma2/eks-cluster.git'
             }
         }
 
