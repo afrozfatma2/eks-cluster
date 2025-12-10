@@ -1,86 +1,52 @@
 pipeline {
     agent any
-
     environment {
-        TF_WORKDIR = "./" // Terraform files are in repo root
+        AWS_DEFAULT_REGION = 'ap-south-1'
     }
-
-    options {
-        buildDiscarder(logRotator(daysToKeepStr: '30'))
-        timeout(time: 30, unit: 'MINUTES')
-    }
-
-    parameters {
-        choice(name: 'ACTION', choices: ['apply', 'destroy'], description: 'Choose action: apply = create cluster, destroy = delete cluster')
-    }
-
-    stages {
-        stage('Checkout') {
-            steps {
-                echo "Checking out Terraform code..."
-                checkout scm
-            }
-        }
-
-        stage('Terraform Init') {
-            steps {
-                dir("${TF_WORKDIR}") {
-                    sh 'terraform init -input=false'
+    stages{
+        stage('Checkout SCM'){
+            steps{
+                script{
+                    checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/yeshwanthlm/EKS-Terraform-Jenkins.git']])
                 }
             }
         }
-
-        stage('Terraform Plan') {
-            steps {
-                dir("${TF_WORKDIR}") {
-                    script {
-                        if (params.ACTION == 'apply') {
-                            sh 'terraform plan -out=tfplan -input=false'
-                        } else {
-                            sh 'terraform plan -destroy -out=tfplan -input=false'
-                        }
+        stage('Initializing Terraform'){
+            steps{
+                script{
+                    dir('terraform'){
+                         sh 'terraform init'
                     }
                 }
             }
         }
-
-        stage('Terraform Apply / Destroy') {
-            steps {
-                dir("${TF_WORKDIR}") {
-                    script {
-                        if (params.ACTION == 'apply') {
-                            echo "Creating EKS cluster..."
-                            sh 'terraform apply -input=false -auto-approve tfplan'
-                        } else {
-                            echo "Destroying EKS cluster..."
-                            sh 'terraform destroy -auto-approve'
-                        }
+        stage('Validating Terraform'){
+            steps{
+                script{
+                    dir('terraform'){
+                         sh 'terraform validate'
                     }
                 }
             }
         }
-
-        stage('Outputs') {
-            when {
-                expression { params.ACTION == 'apply' }
-            }
-            steps {
-                dir("${TF_WORKDIR}") {
-                    sh 'terraform output'
+        stage('Previewing the infrastructure'){
+            steps{
+                script{
+                    dir('terraform'){
+                         sh 'terraform plan'
+                    }
+                    input(message: "Approve?", ok: "proceed")
                 }
             }
         }
-    }
-
-    post {
-        always {
-            cleanWs()
-        }
-        success {
-            echo "Terraform job completed successfully!"
-        }
-        failure {
-            echo "Terraform job failed!"
+        stage('Create/Destroy an EKS cluster'){
+            steps{
+                script{
+                    dir('terraform'){
+                         sh 'terraform $action --auto-approve'
+                    }
+                }
+            }
         }
     }
 }
