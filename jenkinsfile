@@ -2,8 +2,9 @@ pipeline {
     agent any
 
     environment {
-        TF_WORKING_DIR = 'eks-cluster' // Path to your Terraform files in the repo
+        TF_WORKING_DIR = 'eks-cluster' 
     }
+
 
     stages {
         stage('Checkout SCM') {
