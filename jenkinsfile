@@ -2,18 +2,39 @@ pipeline {
     agent any
 
     parameters {
-        choice(name: 'ACTION', choices: ['up', 'down'], description: 'Choose "up" to create cluster or "down" to destroy it')
+        choice(
+            name: 'ACTION',
+            choices: ['up', 'down'],
+            description: 'Choose "up" to create cluster or "down" to destroy it'
+        )
     }
 
     environment {
         AWS_REGION = "ap-south-1"
-        TF_DIR     = "terraform"  // Directory where your eks.tf is
+        // Adjust this to your folder, or "." if files are in root
+        TF_DIR     = "terraform"
     }
 
     stages {
         stage('Checkout') {
             steps {
+                echo "Checking out repository..."
                 checkout scm
+            }
+        }
+
+        stage('Verify Terraform Files') {
+            steps {
+                dir(env.TF_DIR) {
+                    script {
+                        def tfFiles = sh(script: "ls *.tf 2>/dev/null || true", returnStdout: true).trim()
+                        if (!tfFiles) {
+                            error "No Terraform configuration files found in ${env.TF_DIR}!"
+                        } else {
+                            echo "Found Terraform files:\n${tfFiles}"
+                        }
+                    }
+                }
             }
         }
 
