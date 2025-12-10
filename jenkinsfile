@@ -1,52 +1,53 @@
 pipeline {
     agent any
+
     environment {
-        AWS_DEFAULT_REGION = 'ap-south-1'
+        AWS_REGION = 'ap-south-1'
+        TF_WORKSPACE = 'eks-workspace'
     }
-    stages{
-        stage('Checkout SCM'){
-            steps{
-                script{
-                    checkout scmGit(branches: [[name: '*/master']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/afrozfatma2/eks-cluster.git']])
-                }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
             }
         }
-        stage('Initializing Terraform'){
-            steps{
-                script{
-                    dir('terraform'){
-                         sh 'terraform init'
-                    }
-                }
+
+        stage('Terraform Init') {
+            steps {
+                sh '''
+                mkdir -p ${TF_WORKSPACE}
+                cp -r ./* ${TF_WORKSPACE}/
+                cd ${TF_WORKSPACE}
+                terraform init
+                '''
             }
         }
-        stage('Validating Terraform'){
-            steps{
-                script{
-                    dir('terraform'){
-                         sh 'terraform validate'
-                    }
-                }
+
+        stage('Terraform Plan') {
+            steps {
+                sh '''
+                cd ${TF_WORKSPACE}
+                terraform plan -out=tfplan
+                '''
             }
         }
-        stage('Previewing the infrastructure'){
-            steps{
-                script{
-                    dir('terraform'){
-                         sh 'terraform plan'
-                    }
-                    input(message: "Approve?", ok: "proceed")
-                }
+
+        stage('Terraform Apply') {
+            steps {
+                input message: "Apply Terraform changes?"
+                sh '''
+                cd ${TF_WORKSPACE}
+                terraform apply -auto-approve tfplan
+                '''
             }
         }
-        stage('Create/Destroy an EKS cluster'){
-            steps{
-                script{
-                    dir('terraform'){
-                         sh 'terraform $action --auto-approve'
-                    }
-                }
-            }
+    }
+
+    post {
+        always {
+            echo 'Cleaning up workspace'
+            cleanWs()
         }
     }
 }
