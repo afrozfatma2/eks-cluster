@@ -1,9 +1,13 @@
 pipeline {
     agent any
 
+    parameters {
+        choice(name: 'ACTION', choices: ['up', 'down'], description: 'Choose "up" to create cluster or "down" to destroy it')
+    }
+
     environment {
-        AWS_REGION = 'ap-south-1'
-        TF_WORKSPACE = 'eks-workspace'
+        AWS_REGION = "ap-south-1"
+        TF_DIR     = "terraform"  // Directory where your eks.tf is
     }
 
     stages {
@@ -15,39 +19,53 @@ pipeline {
 
         stage('Terraform Init') {
             steps {
-                sh '''
-                mkdir -p ${TF_WORKSPACE}
-                cp -r ./* ${TF_WORKSPACE}/
-                cd ${TF_WORKSPACE}
-                terraform init
-                '''
+                dir(env.TF_DIR) {
+                    sh 'terraform init'
+                }
             }
         }
 
         stage('Terraform Plan') {
             steps {
-                sh '''
-                cd ${TF_WORKSPACE}
-                terraform plan -out=tfplan
-                '''
+                dir(env.TF_DIR) {
+                    script {
+                        if (params.ACTION == 'up') {
+                            sh 'terraform plan -out=tfplan'
+                        } else {
+                            sh 'terraform plan -destroy -out=tfplan'
+                        }
+                    }
+                }
             }
         }
 
-        stage('Terraform Apply') {
+        stage('Terraform Apply / Destroy') {
             steps {
-                input message: "Apply Terraform changes?"
-                sh '''
-                cd ${TF_WORKSPACE}
-                terraform apply -auto-approve tfplan
-                '''
+                dir(env.TF_DIR) {
+                    script {
+                        if (params.ACTION == 'up') {
+                            sh 'terraform apply -auto-approve tfplan'
+                        } else {
+                            sh 'terraform destroy -auto-approve'
+                        }
+                    }
+                }
             }
         }
     }
 
     post {
-        always {
-            echo 'Cleaning up workspace'
-            cleanWs()
+        success {
+            script {
+                if (params.ACTION == 'up') {
+                    echo "EKS Cluster created successfully!"
+                } else {
+                    echo "EKS Cluster destroyed successfully!"
+                }
+            }
+        }
+        failure {
+            echo "Terraform action failed!"
         }
     }
 }

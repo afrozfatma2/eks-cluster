@@ -1,28 +1,44 @@
+provider "aws" {
+  region = "ap-south-1"
+}
+
+# Get the default VPC
+data "aws_vpc" "default" {
+  default = true
+}
+
+# Get the default subnets
+data "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+}
+
+# Create EKS cluster with managed node groups
 module "eks" {
   source          = "terraform-aws-modules/eks/aws"
-  version         = "22.0.0"
-
-  cluster_name    = "my-eks-cluster"
-  cluster_version = "1.30"
-  subnets         = data.aws_subnets.default.ids
+  cluster_name    = "demo-eks-cluster"
+  cluster_version = "1.29"
   vpc_id          = data.aws_vpc.default.id
+  subnets         = data.aws_subnets.default.ids
+  manage_aws_auth = true
 
-  node_groups = {
-    default_nodes = {
-      desired_capacity = 2
-      max_capacity     = 2
-      min_capacity     = 2
-
-      instance_types = ["t3.medium"]
-
-      ami_type = "AL2_x86_64"
-
-      key_name = "" # Optional: add your key pair name here if you want SSH access
-    }
+  # Default settings for all managed node groups
+  eks_managed_node_group_defaults = {
+    ami_type       = "AL2_x86_64"
+    instance_types = ["t3.medium"]
+    attach_cluster_primary_security_group = true
   }
 
-  tags = {
-    Environment = "dev"
-    Terraform   = "true"
+  # Define specific managed node groups
+  eks_managed_node_groups = {
+    demo_node_group = {
+      min_size       = 1
+      max_size       = 2
+      desired_size   = 1
+      instance_types = ["t3.medium"] 
+      capacity_type  = "SPOT"        
+    }
   }
 }
