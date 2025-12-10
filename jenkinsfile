@@ -10,7 +10,7 @@ pipeline {
     }
 
     environment {
-        TF_WORKING_DIR = 'eks-cluster'
+        TF_WORKING_DIR = '.'   // ROOT FOLDER (CORRECTED)
     }
 
     stages {
@@ -28,7 +28,7 @@ pipeline {
             }
         }
 
-        stage('Terraform Plan / Destroy Plan') {
+        stage('Terraform Plan') {
             steps {
                 dir("${TF_WORKING_DIR}") {
                     script {
@@ -63,7 +63,7 @@ pipeline {
                 if (params.ACTION == 'up') {
                     echo 'EKS cluster created/updated successfully!'
                 } else {
-                    echo 'EKS cluster resources destroyed successfully!'
+                    echo 'EKS cluster destroyed successfully!'
                 }
             }
         }
