@@ -1,28 +1,21 @@
 pipeline {
     agent any
 
-    parameters {
-        choice(
-            name: 'ACTION',
-            choices: ['up', 'down'],
-            description: 'Choose "up" to create cluster or "down" to destroy it'
-        )
-    }
-
     environment {
-        TF_DIR = "."  // Terraform files are in repo root
+        TF_WORKING_DIR = 'eks-cluster' // Path to your Terraform files in the repo
     }
 
     stages {
-        stage('Checkout') {
+        stage('Checkout SCM') {
             steps {
-                checkout scm
+                // Checkout the repo (branch can be changed)
+                git branch: 'main', url: 'https://your-repo-url.git'
             }
         }
 
         stage('Terraform Init') {
             steps {
-                dir(env.TF_DIR) {
+                dir("${TF_WORKING_DIR}") {
                     sh 'terraform init'
                 }
             }
@@ -30,28 +23,16 @@ pipeline {
 
         stage('Terraform Plan') {
             steps {
-                dir(env.TF_DIR) {
-                    script {
-                        if (params.ACTION == 'up') {
-                            sh 'terraform plan -out=tfplan'
-                        } else {
-                            sh 'terraform plan -destroy -out=tfplan'
-                        }
-                    }
+                dir("${TF_WORKING_DIR}") {
+                    sh 'terraform plan -out=tfplan'
                 }
             }
         }
 
-        stage('Terraform Apply / Destroy') {
+        stage('Terraform Apply') {
             steps {
-                dir(env.TF_DIR) {
-                    script {
-                        if (params.ACTION == 'up') {
-                            sh 'terraform apply -auto-approve tfplan'
-                        } else {
-                            sh 'terraform destroy -auto-approve'
-                        }
-                    }
+                dir("${TF_WORKING_DIR}") {
+                    sh 'terraform apply -auto-approve tfplan'
                 }
             }
         }
@@ -59,10 +40,10 @@ pipeline {
 
     post {
         success {
-            echo "Terraform ${params.ACTION} completed successfully!"
+            echo 'EKS cluster created successfully!'
         }
         failure {
-            echo "Terraform ${params.ACTION} failed!"
+            echo 'Terraform apply failed!'
         }
     }
 }
