@@ -27,4 +27,7 @@ variable "key_pair_name" {
   default     = "jenkins-server-key"  
 }
 
-variable "region"
+variable "region" {
+  description = "AWS region to deploy EKS cluster"
+  default     = "ap-south-1"
+}
