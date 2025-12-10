@@ -10,31 +10,13 @@ pipeline {
     }
 
     environment {
-        AWS_REGION = "ap-south-1"
-        // Adjust this to your folder, or "." if files are in root
-        TF_DIR     = "terraform"
+        TF_DIR = "."  // Terraform files are in repo root
     }
 
     stages {
         stage('Checkout') {
             steps {
-                echo "Checking out repository..."
                 checkout scm
-            }
-        }
-
-        stage('Verify Terraform Files') {
-            steps {
-                dir(env.TF_DIR) {
-                    script {
-                        def tfFiles = sh(script: "ls *.tf 2>/dev/null || true", returnStdout: true).trim()
-                        if (!tfFiles) {
-                            error "No Terraform configuration files found in ${env.TF_DIR}!"
-                        } else {
-                            echo "Found Terraform files:\n${tfFiles}"
-                        }
-                    }
-                }
             }
         }
 
@@ -77,16 +59,10 @@ pipeline {
 
     post {
         success {
-            script {
-                if (params.ACTION == 'up') {
-                    echo "EKS Cluster created successfully!"
-                } else {
-                    echo "EKS Cluster destroyed successfully!"
-                }
-            }
+            echo "Terraform ${params.ACTION} completed successfully!"
         }
         failure {
-            echo "Terraform action failed!"
+            echo "Terraform ${params.ACTION} failed!"
         }
     }
 }
