@@ -1,15 +1,21 @@
 pipeline {
     agent any
 
-    environment {
-        TF_WORKING_DIR = 'eks-cluster' 
+    parameters {
+        choice(
+            name: 'ACTION',
+            choices: ['up', 'down'],
+            description: 'Select "up" to create/apply infrastructure, "down" to destroy it'
+        )
     }
 
+    environment {
+        TF_WORKING_DIR = 'eks-cluster'
+    }
 
     stages {
         stage('Checkout SCM') {
             steps {
-                // Checkout the repo (branch can be changed)
                 git branch: 'master', url: 'https://github.com/afrozfatma2/eks-cluster.git'
             }
         }
@@ -22,18 +28,30 @@ pipeline {
             }
         }
 
-        stage('Terraform Plan') {
+        stage('Terraform Plan / Destroy Plan') {
             steps {
                 dir("${TF_WORKING_DIR}") {
-                    sh 'terraform plan -out=tfplan'
+                    script {
+                        if (params.ACTION == 'up') {
+                            sh 'terraform plan -out=tfplan'
+                        } else {
+                            sh 'terraform plan -destroy -out=tfplan-destroy'
+                        }
+                    }
                 }
             }
         }
 
-        stage('Terraform Apply') {
+        stage('Terraform Apply / Destroy') {
             steps {
                 dir("${TF_WORKING_DIR}") {
-                    sh 'terraform apply -auto-approve tfplan'
+                    script {
+                        if (params.ACTION == 'up') {
+                            sh 'terraform apply -auto-approve tfplan'
+                        } else {
+                            sh 'terraform apply -auto-approve tfplan-destroy'
+                        }
+                    }
                 }
             }
         }
@@ -41,10 +59,16 @@ pipeline {
 
     post {
         success {
-            echo 'EKS cluster created successfully!'
+            script {
+                if (params.ACTION == 'up') {
+                    echo 'EKS cluster created/updated successfully!'
+                } else {
+                    echo 'EKS cluster resources destroyed successfully!'
+                }
+            }
         }
         failure {
-            echo 'Terraform apply failed!'
+            echo 'Terraform FAILED!'
         }
     }
 }
